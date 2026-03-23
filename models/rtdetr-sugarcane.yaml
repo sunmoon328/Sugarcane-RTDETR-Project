@@ -1,0 +1,49 @@
+# 文件路径: Sugarcane-RTDETR-Project/models/rtdetr-sugarcane.yaml
+# 融合 ASC (非对称条形卷积) 与 CA (坐标注意力) 的改进版 RT-DETR
+
+nc: 1  # 类别数
+scales:
+  l: [1.00, 1.00, 1024]
+
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, ConvNormLayer, [32, 3, 2]]
+  - [-1, 1, ConvNormLayer, [32, 3, 1]]
+  - [-1, 1, ConvNormLayer, [64, 3, 1]]
+  - [-1, 1, nn.MaxPool2d, [3, 2, 1]]
+  - [-1, 3, Blocks, [64, BasicBlock, 2]]
+  - [-1, 4, Blocks, [128, BasicBlock, 2]]
+
+  # 【创新点 1】: 将标准模块替换为 AsymmetricStripConv，增强细长甘蔗特征
+  - [-1, 1, AsymmetricStripConv, [128]]
+
+  - [-1, 6, Blocks, [256, BasicBlock, 2]]
+  - [-1, 3, Blocks, [512, BasicBlock, 2]]
+
+head:
+  - [-1, 1, Conv, [256, 1, 1]]
+  - [-1, 1, AIFI, [1024, 8]]
+  - [-1, 1, Conv, [256, 1, 1]]
+
+  # 【创新点 2】: 插入 CoordAtt 坐标注意力，跨越遮挡建立空间联系
+  - [-1, 1, CoordAtt, [256]]
+
+  - [-1, 1, Conv, [256, 1, 1]]
+  - [-1, 1, nn.Upsample, [None, 2, nearest]]
+  - [7, 1, Conv, [256, 1, 1]] # concat with P4
+  - [[-2, -1], 1, Concat, [1]]
+  - [-1, 3, RepC3, [256, 0.5]]
+  - [-1, 1, Conv, [256, 1, 1]]
+  - [-1, 1, nn.Upsample, [None, 2, nearest]]
+  - [6, 1, Conv, [256, 1, 1]] # concat with P3
+  - [[-2, -1], 1, Concat, [1]]
+  - [-1, 3, RepC3, [256, 0.5]]
+  - [-1, 1, Conv, [256, 3, 2]]
+  - [[-1, 18], 1, Concat, [1]] # concat with P4
+  - [-1, 3, RepC3, [256, 0.5]]
+  - [-1, 1, Conv, [256, 3, 2]]
+  - [[-1, 14], 1, Concat, [1]] # concat with P5
+  - [-1, 3, RepC3, [256, 0.5]]
+
+  # RTDETR 实例分割头
+  - [[21, 24, 27], 1, RTDETRSegment, [nc, 256, 300]]

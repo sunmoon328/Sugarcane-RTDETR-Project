@@ -1,0 +1,17 @@
+# 路径配置：告诉模型数据集的根目录在哪里
+path: ./datasets/sugarcane_coco
+
+# 训练集、验证集、测试集的图片路径
+train: images/train
+val: images/val
+test: images/test
+
+# COCO 格式的标注文件路径 (如果你的代码框架需要明确指出 json 路径)
+annotations:
+  train: annotations/instances_train.json
+  val: annotations/instances_val.json
+  test: annotations/instances_test.json
+
+# 类别配置
+nc: 1                 # 类别数量 (Number of Classes)
+names: ['sugarcane']  # 类别名称
